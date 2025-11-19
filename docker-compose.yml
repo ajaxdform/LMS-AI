@@ -1,0 +1,81 @@
+# Docker Compose configuration for LMS Project
+# This orchestrates all services: MongoDB, Backend (Spring Boot), and Frontend (React/Vite)
+
+version: '3.8'
+
+services:
+  # Spring Boot Backend API
+  backend:
+    build:
+      context: ./lms-backend
+      dockerfile: Dockerfile
+    container_name: lms-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # MongoDB Atlas Connection
+      SPRING_DATA_MONGODB_URI: ${MONGODB_ATLAS_URI}
+      SPRING_DATA_MONGODB_DATABASE: ${MONGODB_DATABASE:-lms}
+      
+      # Server Configuration
+      SERVER_PORT: 8080
+      
+      # Firebase Configuration (from your existing setup)
+      FIREBASE_PROJECT_ID: lms-auth-3dbe0
+      FIREBASE_CREDENTIALS_PATH: /app/firebase/firebase-adminsdk.json
+      
+      # Email Configuration (if using)
+      SPRING_MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      
+      # Cache Configuration
+      SPRING_CACHE_TYPE: caffeine
+      
+      # Logging
+      LOGGING_LEVEL_ROOT: INFO
+      LOGGING_LEVEL_COM_DEVLCM: DEBUG
+    volumes:
+      - ./lms-backend/src/main/resources/firebase:/app/firebase:ro
+      - backend_logs:/app/logs
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # React Frontend (Vite)
+  frontend:
+    build:
+      context: ./lcm-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080/api/v1
+    container_name: lms-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_URL: http://localhost:8080/api/v1
+      VITE_FIREBASE_API_KEY: AIzaSyDgd9EqDIxDOapI5RE_Pp0elOIcgAyeShc
+      VITE_FIREBASE_AUTH_DOMAIN: lms-auth-3dbe0.firebaseapp.com
+      VITE_FIREBASE_PROJECT_ID: lms-auth-3dbe0
+    depends_on:
+      - backend
+    networks:
+      - lms-network
+
+# Named volumes for data persistence
+volumes:
+  backend_logs:
+    driver: local
+
+# Network for inter-service communication
+networks:
+  lms-network:
+    driver: bridge

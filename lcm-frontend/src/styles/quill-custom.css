@@ -1,0 +1,152 @@
+/* Rich Text Editor Styles for Admin Panel */
+
+/* Quill Editor Height Adjustments */
+.ql-container {
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.ql-editor {
+  min-height: 150px;
+}
+
+/* Quill Editor Placeholder */
+.ql-editor.ql-blank::before {
+  font-style: italic;
+  color: #9ca3af;
+}
+
+/* Quill Content Display Styles */
+.quill-content {
+  font-size: 16px;
+  line-height: 1.75;
+  color: #374151;
+}
+
+.quill-content h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: #1f2937;
+}
+
+.quill-content h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 0.83em;
+  margin-bottom: 0.5em;
+  color: #1f2937;
+}
+
+.quill-content h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: #1f2937;
+}
+
+.quill-content p {
+  margin-bottom: 1em;
+}
+
+.quill-content ul,
+.quill-content ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.quill-content ul {
+  list-style-type: disc;
+}
+
+.quill-content ol {
+  list-style-type: decimal;
+}
+
+.quill-content li {
+  margin-bottom: 0.5em;
+}
+
+.quill-content strong {
+  font-weight: bold;
+}
+
+.quill-content em {
+  font-style: italic;
+}
+
+.quill-content u {
+  text-decoration: underline;
+}
+
+.quill-content s {
+  text-decoration: line-through;
+}
+
+.quill-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.quill-content a:hover {
+  color: #1d4ed8;
+}
+
+.quill-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 1em 0;
+  border-radius: 0.5rem;
+}
+
+.quill-content pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-family: 'Courier New', monospace;
+}
+
+.quill-content code {
+  background-color: #f3f4f6;
+  color: #ef4444;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.quill-content pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.quill-content blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  margin-left: 0;
+  margin-bottom: 1em;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Quill video embed */
+.quill-content iframe {
+  max-width: 100%;
+  margin: 1em 0;
+  border-radius: 0.5rem;
+}
+
+/* Ensure proper spacing */
+.quill-content > *:first-child {
+  margin-top: 0;
+}
+
+.quill-content > *:last-child {
+  margin-bottom: 0;
+}

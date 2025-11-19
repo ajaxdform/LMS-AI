@@ -1,0 +1,28 @@
+# Docker ignore file for frontend
+node_modules
+dist
+build
+.env
+.env.local
+.env.production
+
+## IDE
+.idea
+.vscode
+*.iml
+
+## Logs
+logs
+*.log
+npm-debug.log*
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Other
+.git
+.gitignore
+README.md
+coverage
+.eslintcache

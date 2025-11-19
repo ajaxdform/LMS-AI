@@ -24,10 +24,27 @@ const getCsrfToken = () => {
 api.interceptors.request.use(
   async (config) => {
     try {
-      // Add CSRF token from cookie to header
-      const csrfToken = getCsrfToken();
-      if (csrfToken) {
-        config.headers['X-XSRF-TOKEN'] = csrfToken;
+      // For non-GET requests, ensure we have a CSRF token
+      if (config.method && config.method.toLowerCase() !== 'get') {
+        let csrfToken = getCsrfToken();
+        
+        // If no CSRF token exists, fetch it first
+        if (!csrfToken) {
+          try {
+            // Use dedicated CSRF endpoint
+            await axios.get('http://localhost:8080/api/v1/csrf', {
+              withCredentials: true
+            });
+            csrfToken = getCsrfToken();
+          } catch (err) {
+            console.warn('Failed to fetch CSRF token:', err);
+          }
+        }
+        
+        // Add CSRF token to header
+        if (csrfToken) {
+          config.headers['X-XSRF-TOKEN'] = csrfToken;
+        }
       }
       
       // Get fresh token from Firebase if user is logged in
@@ -58,27 +75,60 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error.response?.status;
+    const originalRequest = error.config;
     
-    // Handle 401 Unauthorized and 403 Forbidden for unauthenticated users
+    // Handle 401 Unauthorized and 403 Forbidden for authenticated users
     if (status === 401 || status === 403) {
       const currentUser = auth.currentUser;
       
-      // Only try to refresh and redirect if user is actually logged in
-      if (currentUser && status === 401) {
-        // Token expired, try to refresh
+      // Handle 403 CSRF token issues for authenticated users
+      if (currentUser && status === 403 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        
+        try {
+          // Fetch a fresh CSRF token using dedicated endpoint
+          await axios.get('http://localhost:8080/api/v1/csrf', {
+            withCredentials: true
+          });
+          
+          const csrfToken = getCsrfToken();
+          if (csrfToken) {
+            originalRequest.headers['X-XSRF-TOKEN'] = csrfToken;
+          }
+          
+          // Also refresh the Firebase token
+          const newToken = await currentUser.getIdToken(true);
+          localStorage.setItem("token", newToken);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          
+          // Retry the original request
+          return api.request(originalRequest);
+        } catch (retryError) {
+          console.error("Retry failed:", retryError);
+          // If retry fails, redirect to login
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+          return Promise.reject(retryError);
+        }
+      }
+      
+      // Handle 401 for authenticated users (token expired)
+      if (currentUser && status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        
         try {
           const newToken = await currentUser.getIdToken(true); // Force refresh
           localStorage.setItem("token", newToken);
-          // Retry the original request
-          error.config.headers.Authorization = `Bearer ${newToken}`;
-          return api.request(error.config);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api.request(originalRequest);
         } catch (refreshError) {
           console.error("Token refresh failed:", refreshError);
-          // Redirect to login only if token refresh fails for logged-in user
           localStorage.removeItem("token");
           window.location.href = "/login";
+          return Promise.reject(refreshError);
         }
       }
+      
       // If no current user, don't redirect - just return the error
       // This allows unauthenticated users to browse public content
     }

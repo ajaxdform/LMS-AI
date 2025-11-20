@@ -13,7 +13,11 @@ import ChapterList from "./pages/ChapterList";
 import TopicList from "./pages/TopicList";
 import TopicDetails from "./pages/TopicDetails";
 import QuizPage from "./pages/QuizPage";
+import EnhancedQuizPage from "./pages/EnhancedQuizPage";
 import CertificatePage from "./pages/CertificatePage";
+import ForumList from "./pages/ForumList";
+import ForumPostDetail from "./pages/ForumPostDetail";
+import CreateForumPost from "./pages/CreateForumPost";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminCourses from "./pages/admin/AdminCourses";
@@ -85,6 +89,14 @@ function App() {
               path="/chapters/:chapterId/quiz"
               element={
                 <ProtectedRoute>
+                  <EnhancedQuizPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chapters/:chapterId/quiz/simple"
+              element={
+                <ProtectedRoute>
                   <QuizPage />
                 </ProtectedRoute>
               }
@@ -110,6 +122,31 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CertificatePage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Forum Routes */}
+            <Route
+              path="/forum"
+              element={
+                <ProtectedRoute>
+                  <ForumList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/new"
+              element={
+                <ProtectedRoute>
+                  <CreateForumPost />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/post/:postId"
+              element={
+                <ProtectedRoute>
+                  <ForumPostDetail />
                 </ProtectedRoute>
               }
             />

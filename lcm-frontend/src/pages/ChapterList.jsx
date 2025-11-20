@@ -211,7 +211,7 @@ export default function ChapterList() {
         }
 
         // Fetch user progress for this course (only if user is logged in)
-        if (currentUser) {
+        if (user) {
           try {
             const progressResponse = await api.get(`/user-progress`, {
               params: {
@@ -228,7 +228,7 @@ export default function ChapterList() {
       } catch (err) {
         console.error("Error fetching data:", err);
         // Don't show error for 401 if user is not logged in (they're just browsing)
-        if (err.response?.status === 401 && !currentUser) {
+        if (err.response?.status === 401 && !user) {
           console.log("User not logged in - showing preview mode");
         } else if (err.response?.status === 404) {
           setError("Course not found");
@@ -523,7 +523,7 @@ export default function ChapterList() {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      {!currentUser ? (
+                      {!user ? (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
                           <svg className="w-12 h-12 text-blue-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

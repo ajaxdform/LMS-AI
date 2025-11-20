@@ -6,7 +6,7 @@ import api from "../api/axios";
 export default function CourseDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,12 +21,17 @@ export default function CourseDetails() {
         setCourse(response.data.data);
         
         // Check if user is enrolled (only if logged in)
-        if (currentUser) {
+        if (user) {
           try {
             const enrollmentsResponse = await api.get("/enrollments/courses");
             console.log("Enrollments response:", enrollmentsResponse.data);
             const enrolledCourses = enrollmentsResponse.data.data || [];
-            setIsEnrolled(enrolledCourses.some((c) => c.id === id));
+            console.log("Checking enrollment for course ID:", id);
+            console.log("Enrolled course IDs:", enrolledCourses.map(c => c.courseId || c.id));
+            // Check both courseId and id fields to handle different API response formats
+            const enrolled = enrolledCourses.some((c) => c.id === id || c.courseId === id);
+            console.log("Is enrolled:", enrolled);
+            setIsEnrolled(enrolled);
           } catch (enrollErr) {
             console.error("Error checking enrollment:", enrollErr);
             setIsEnrolled(false);
@@ -51,7 +56,7 @@ export default function CourseDetails() {
     };
 
     fetchCourse();
-  }, [id]);
+  }, [id, user]);
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
@@ -171,7 +176,7 @@ export default function CourseDetails() {
             
             {/* Enroll Button */}
             <div className="ml-8">
-              {currentUser ? (
+              {user ? (
                 isEnrolled ? (
                   <button
                     onClick={handleUnenroll}

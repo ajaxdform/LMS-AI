@@ -13,9 +13,18 @@ export default function AdminQuizzes() {
   const [showForm, setShowForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [formData, setFormData] = useState({ 
+    type: 'SINGLE_CHOICE',
     question: '',
     options: ['', '', '', ''],
-    correctOptionIndex: 0
+    correctOptionIndex: 0,
+    correctOptionIndices: [],
+    correctAnswer: null,
+    points: 1,
+    explanation: '',
+    programmingLanguage: 'javascript',
+    sampleCode: '',
+    expectedOutput: '',
+    testCases: ''
   });
   const [submitting, setSubmitting] = useState(false);
   
@@ -74,9 +83,22 @@ export default function AdminQuizzes() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate that all options are filled
-    if (formData.options.some(opt => !opt.trim())) {
+    // Validate based on question type
+    const questionType = formData.type || 'SINGLE_CHOICE';
+    
+    if ((questionType === 'SINGLE_CHOICE' || questionType === 'MULTIPLE_CHOICE') && 
+        formData.options.some(opt => !opt.trim())) {
       toast.warning('Please fill in all answer options');
+      return;
+    }
+
+    if (questionType === 'MULTIPLE_CHOICE' && formData.correctOptionIndices.length === 0) {
+      toast.warning('Please select at least one correct option');
+      return;
+    }
+
+    if (questionType === 'TRUE_FALSE' && formData.correctAnswer === null) {
+      toast.warning('Please select the correct answer (True or False)');
       return;
     }
 
@@ -84,10 +106,27 @@ export default function AdminQuizzes() {
     
     try {
       const newQuestion = {
+        type: questionType,
         question: formData.question,
-        options: formData.options,
-        correctOptionIndex: parseInt(formData.correctOptionIndex)
+        points: parseInt(formData.points) || 1,
+        explanation: formData.explanation || null
       };
+
+      // Add type-specific fields
+      if (questionType === 'SINGLE_CHOICE') {
+        newQuestion.options = formData.options;
+        newQuestion.correctOptionIndex = parseInt(formData.correctOptionIndex);
+      } else if (questionType === 'MULTIPLE_CHOICE') {
+        newQuestion.options = formData.options;
+        newQuestion.correctOptionIndices = formData.correctOptionIndices;
+      } else if (questionType === 'TRUE_FALSE') {
+        newQuestion.correctAnswer = formData.correctAnswer;
+      } else if (questionType === 'CODE_EVALUATION') {
+        newQuestion.programmingLanguage = formData.programmingLanguage;
+        newQuestion.sampleCode = formData.sampleCode;
+        newQuestion.expectedOutput = formData.expectedOutput;
+        newQuestion.testCases = formData.testCases;
+      }
 
       if (editingQuestion) {
         // Update existing question - replace it in the questions array
@@ -121,7 +160,20 @@ export default function AdminQuizzes() {
       
       setShowForm(false);
       setEditingQuestion(null);
-      setFormData({ question: '', options: ['', '', '', ''], correctOptionIndex: 0 });
+      setFormData({ 
+        type: 'SINGLE_CHOICE',
+        question: '',
+        options: ['', '', '', ''],
+        correctOptionIndex: 0,
+        correctOptionIndices: [],
+        correctAnswer: null,
+        points: 1,
+        explanation: '',
+        programmingLanguage: 'javascript',
+        sampleCode: '',
+        expectedOutput: '',
+        testCases: ''
+      });
       fetchChapterAndQuiz();
     } catch (error) {
       console.error('Error saving question:', error);
@@ -133,10 +185,20 @@ export default function AdminQuizzes() {
 
   const handleEdit = (question) => {
     setEditingQuestion(question);
+    const questionType = question.type || 'SINGLE_CHOICE';
     setFormData({
+      type: questionType,
       question: question.question,
-      options: [...question.options],
-      correctOptionIndex: question.correctOptionIndex
+      options: question.options ? [...question.options] : ['', '', '', ''],
+      correctOptionIndex: question.correctOptionIndex || 0,
+      correctOptionIndices: question.correctOptionIndices || [],
+      correctAnswer: question.correctAnswer,
+      points: question.points || 1,
+      explanation: question.explanation || '',
+      programmingLanguage: question.programmingLanguage || 'javascript',
+      sampleCode: question.sampleCode || '',
+      expectedOutput: question.expectedOutput || '',
+      testCases: question.testCases || ''
     });
     setShowForm(true);
   };
@@ -192,7 +254,28 @@ export default function AdminQuizzes() {
   const handleCancel = () => {
     setShowForm(false);
     setEditingQuestion(null);
-    setFormData({ question: '', options: ['', '', '', ''], correctOptionIndex: 0 });
+    setFormData({ 
+      type: 'SINGLE_CHOICE',
+      question: '',
+      options: ['', '', '', ''],
+      correctOptionIndex: 0,
+      correctOptionIndices: [],
+      correctAnswer: null,
+      points: 1,
+      explanation: '',
+      programmingLanguage: 'javascript',
+      sampleCode: '',
+      expectedOutput: '',
+      testCases: ''
+    });
+  };
+
+  const toggleMultipleChoiceOption = (index) => {
+    const current = formData.correctOptionIndices || [];
+    const updated = current.includes(index)
+      ? current.filter(i => i !== index)
+      : [...current, index];
+    setFormData({ ...formData, correctOptionIndices: updated });
   };
 
   const updateOption = (index, value) => {
@@ -271,6 +354,31 @@ export default function AdminQuizzes() {
             {editingQuestion ? 'Edit Question' : 'Add New Question'}
           </h2>
           <div className="space-y-4">
+            {/* Question Type Selector */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { value: 'SINGLE_CHOICE', label: 'Single Choice', icon: '○' },
+                { value: 'MULTIPLE_CHOICE', label: 'Multi-Select', icon: '☑' },
+                { value: 'TRUE_FALSE', label: 'True/False', icon: '✓/✗' },
+                { value: 'CODE_EVALUATION', label: 'Code', icon: '</>' }
+              ].map(type => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setFormData({...formData, type: type.value})}
+                  className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                    formData.type === type.value
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="text-2xl mb-1">{type.icon}</div>
+                  {type.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Question Text */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Question *
@@ -285,43 +393,200 @@ export default function AdminQuizzes() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Answer Options *
-              </label>
-              {formData.options.map((option, index) => (
-                <div key={index} className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-gray-600 w-8">
-                    {String.fromCharCode(65 + index)}.
-                  </span>
-                  <input
-                    type="text"
-                    value={option}
-                    onChange={(e) => updateOption(index, e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                  />
-                </div>
-              ))}
-            </div>
-
+            {/* Points */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Correct Answer *
+                Points
               </label>
-              <select
-                value={formData.correctOptionIndex}
-                onChange={(e) => setFormData({...formData, correctOptionIndex: parseInt(e.target.value)})}
-                className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
+              <input
+                type="number"
+                min="1"
+                value={formData.points}
+                onChange={(e) => setFormData({...formData, points: e.target.value})}
+                className="w-32 border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Single Choice Options */}
+            {formData.type === 'SINGLE_CHOICE' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Answer Options *
+                  </label>
+                  {formData.options.map((option, index) => (
+                    <div key={index} className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-600 w-8">
+                        {String.fromCharCode(65 + index)}.
+                      </span>
+                      <input
+                        type="text"
+                        value={option}
+                        onChange={(e) => updateOption(index, e.target.value)}
+                        className="flex-1 border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                        placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Correct Answer *
+                  </label>
+                  <select
+                    value={formData.correctOptionIndex}
+                    onChange={(e) => setFormData({...formData, correctOptionIndex: parseInt(e.target.value)})}
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    {formData.options.map((option, index) => (
+                      <option key={index} value={index}>
+                        {String.fromCharCode(65 + index)} - {option || '(empty)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* Multiple Choice Options */}
+            {formData.type === 'MULTIPLE_CHOICE' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Answer Options * (Check all correct answers)
+                </label>
                 {formData.options.map((option, index) => (
-                  <option key={index} value={index}>
-                    {String.fromCharCode(65 + index)} - {option || '(empty)'}
-                  </option>
+                  <div key={index} className="flex items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.correctOptionIndices.includes(index)}
+                      onChange={() => toggleMultipleChoiceOption(index)}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium text-gray-600 w-8">
+                      {String.fromCharCode(65 + index)}.
+                    </span>
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => updateOption(index, e.target.value)}
+                      className="flex-1 border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                      placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                    />
+                  </div>
                 ))}
-              </select>
+              </div>
+            )}
+
+            {/* True/False Options */}
+            {formData.type === 'TRUE_FALSE' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Correct Answer *
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="trueFalse"
+                      checked={formData.correctAnswer === true}
+                      onChange={() => setFormData({...formData, correctAnswer: true})}
+                      className="w-4 h-4 text-green-600"
+                    />
+                    <span className="ml-3 font-medium text-green-700">True</span>
+                  </label>
+                  <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="trueFalse"
+                      checked={formData.correctAnswer === false}
+                      onChange={() => setFormData({...formData, correctAnswer: false})}
+                      className="w-4 h-4 text-red-600"
+                    />
+                    <span className="ml-3 font-medium text-red-700">False</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Code Evaluation Fields */}
+            {formData.type === 'CODE_EVALUATION' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Programming Language *
+                  </label>
+                  <select
+                    value={formData.programmingLanguage}
+                    onChange={(e) => setFormData({...formData, programmingLanguage: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                    <option value="csharp">C#</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sample/Starter Code
+                  </label>
+                  <textarea
+                    value={formData.sampleCode}
+                    onChange={(e) => setFormData({...formData, sampleCode: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="6"
+                    placeholder="function solution() {
+  // Your code here
+}"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Expected Output
+                  </label>
+                  <textarea
+                    value={formData.expectedOutput}
+                    onChange={(e) => setFormData({...formData, expectedOutput: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder="Expected output or pattern..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Test Cases (JSON)
+                  </label>
+                  <textarea
+                    value={formData.testCases}
+                    onChange={(e) => setFormData({...formData, testCases: e.target.value})}
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder='[{"input": 5, "output": 120}]'
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Explanation/Hint */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Explanation/Hint (Optional)
+              </label>
+              <textarea
+                value={formData.explanation}
+                onChange={(e) => setFormData({...formData, explanation: e.target.value})}
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="2"
+                placeholder="Provide a hint or explanation for this question..."
+              />
             </div>
 
             <div className="flex gap-3">

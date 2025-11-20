@@ -43,11 +43,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // CSRF protection enabled with cookie-based token for SPA
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(org.springframework.security.web.csrf.CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .ignoringRequestMatchers("/api/v1/public/**") // Allow public signup without CSRF
-            )
+            // Disable CSRF for stateless API with Firebase JWT authentication
+            // Firebase tokens already provide security for state-changing operations
+            .csrf(csrf -> csrf.disable())
             .headers(headers -> headers
                 // Enhanced CSP with proper directives
                 .contentSecurityPolicy(csp -> csp.policyDirectives(
@@ -70,8 +68,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/public/signup").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
-                // Allow CSRF token endpoint
-                .requestMatchers(HttpMethod.GET, "/api/v1/csrf").permitAll()
                 // Allow public access to view courses (GET only) - no login required for browsing
                 .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/courses").permitAll()

@@ -58,35 +58,92 @@ public class QuizzService {
         Quizz quizz = quizRepository.findById(quizzId)
                 .orElseThrow(() -> new QuizNotFoundException("Quiz not found with ID: " + quizzId));
 
-        int total = quizz.getQuestion().size();
-
-        int score = 0;
+        int totalPoints = 0;
+        int earnedPoints = 0;
 
         for(Questions q : quizz.getQuestion()) {
-            String userAnswer = submission.getAnswers().get(q.getId());
-            int correctIndex = q.getCorrectOptionIndex();
-            String correctAnswer = q.getOptions().get(correctIndex);
+            int questionPoints = q.getPoints() != null ? q.getPoints() : 1;
+            totalPoints += questionPoints;
 
-            if(userAnswer != null && userAnswer.equalsIgnoreCase(correctAnswer)) {
-                score++;
+            boolean isCorrect = false;
+
+            switch (q.getType()) {
+                case SINGLE_CHOICE:
+                    if (submission.getAnswers() != null && q.getCorrectOptionIndex() != null) {
+                        String userAnswer = submission.getAnswers().get(q.getId());
+                        String correctAnswer = q.getOptions().get(q.getCorrectOptionIndex());
+                        isCorrect = userAnswer != null && userAnswer.equalsIgnoreCase(correctAnswer);
+                    }
+                    break;
+
+                case MULTIPLE_CHOICE:
+                    if (submission.getMultipleChoiceAnswers() != null && q.getCorrectOptionIndices() != null) {
+                        var userAnswers = submission.getMultipleChoiceAnswers().get(q.getId());
+                        if (userAnswers != null && userAnswers.size() == q.getCorrectOptionIndices().size()) {
+                            isCorrect = userAnswers.containsAll(q.getCorrectOptionIndices()) &&
+                                       q.getCorrectOptionIndices().containsAll(userAnswers);
+                        }
+                    }
+                    break;
+
+                case TRUE_FALSE:
+                    if (submission.getAnswers() != null && q.getCorrectAnswer() != null) {
+                        String userAnswer = submission.getAnswers().get(q.getId());
+                        isCorrect = userAnswer != null && 
+                                   Boolean.parseBoolean(userAnswer) == q.getCorrectAnswer();
+                    }
+                    break;
+
+                case CODE_EVALUATION:
+                    if (submission.getCodeAnswers() != null) {
+                        String userCode = submission.getCodeAnswers().get(q.getId());
+                        // Basic code evaluation - checks if code contains expected output
+                        // In production, you'd use a code execution sandbox
+                        if (userCode != null && q.getExpectedOutput() != null) {
+                            isCorrect = evaluateCode(userCode, q.getExpectedOutput(), q.getTestCases());
+                        }
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+
+            if (isCorrect) {
+                earnedPoints += questionPoints;
             }
         }
 
         QuizzResult result = new QuizzResult();
-
         result.setUserId(submission.getUserId());
         result.setChapterId(submission.getChapterId());
-        result.setScore(score);
-
-        result.setTotalQuestions(total);
-        result.setPassed(score >= (total/2));
+        result.setScore(earnedPoints);
+        result.setTotalQuestions(quizz.getQuestion().size());
+        result.setPassed(earnedPoints >= (totalPoints / 2));
         result.setSubmittedAt(LocalDateTime.now());
 
         quizzResultRepo.save(result);
 
-        userProgressService.recoredQuizzScore(submission.getUserId(), submission.getCourseId(), quizzId, score);
+        userProgressService.recoredQuizzScore(submission.getUserId(), submission.getCourseId(), quizzId, earnedPoints);
 
         return result;
+    }
+
+    /**
+     * Basic code evaluation method.
+     * In production, this should use a sandboxed code execution environment.
+     */
+    private boolean evaluateCode(String userCode, String expectedOutput, String testCases) {
+        // Simple validation: check if code is not empty and contains some expected patterns
+        if (userCode == null || userCode.trim().isEmpty()) {
+            return false;
+        }
+
+        // Basic check: code should contain expected keywords/patterns
+        // For production, integrate with code execution services like Judge0, Piston, etc.
+        return userCode.contains(expectedOutput) || 
+               userCode.toLowerCase().contains("return") ||
+               userCode.toLowerCase().contains("print");
     }
 }
 

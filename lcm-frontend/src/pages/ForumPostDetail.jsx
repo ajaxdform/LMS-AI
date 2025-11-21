@@ -458,7 +458,6 @@ export default function ForumPostDetail() {
                           <button
                             onClick={() => handleMarkAsAnswer(reply.id)}
                             className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-2 py-1 rounded-md font-semibold shadow-md hover:shadow-lg transition-all duration-200">
-                          >
                             ✓ Answer
                           </button>
                         </>
@@ -469,7 +468,6 @@ export default function ForumPostDetail() {
                           <button
                             onClick={() => handleDeleteReply(reply.id)}
                             className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-md font-semibold shadow-md hover:shadow-lg transition-all duration-200">
-                          >
                             Delete
                           </button>
                         </>

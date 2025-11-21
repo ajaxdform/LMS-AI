@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import { auth } from '../firebase';
+import { updatePassword, EmailAuthProvider, linkWithCredential, fetchSignInMethodsForEmail } from 'firebase/auth';
 
 // Avatar options with cartoon style
 const AVATARS = [
@@ -27,6 +29,13 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [user, setUser] = useState(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [signInMethods, setSignInMethods] = useState([]);
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [settingPassword, setSettingPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -37,6 +46,7 @@ export default function Profile() {
 
   useEffect(() => {
     fetchProfile();
+    checkSignInMethods();
   }, []);
 
   const fetchProfile = async () => {
@@ -56,6 +66,77 @@ export default function Profile() {
       toast.error('Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkSignInMethods = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (currentUser && currentUser.email) {
+        const methods = await fetchSignInMethodsForEmail(auth, currentUser.email);
+        setSignInMethods(methods);
+      }
+    } catch (error) {
+      console.error('Error checking sign-in methods:', error);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error('Please fill in all password fields');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setSettingPassword(true);
+    try {
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        toast.error('No user logged in');
+        return;
+      }
+
+      // Check if user already has password authentication
+      const hasPassword = signInMethods.includes('password');
+      
+      if (hasPassword) {
+        // Update existing password
+        await updatePassword(currentUser, passwordData.newPassword);
+        toast.success('Password updated successfully');
+      } else {
+        // Link password credential to Google account
+        const credential = EmailAuthProvider.credential(
+          currentUser.email,
+          passwordData.newPassword
+        );
+        await linkWithCredential(currentUser, credential);
+        toast.success('Password set successfully! You can now login with email and password.');
+        await checkSignInMethods(); // Refresh sign-in methods
+      }
+
+      setPasswordData({ newPassword: '', confirmPassword: '' });
+      setShowPasswordSection(false);
+    } catch (error) {
+      console.error('Error setting password:', error);
+      if (error.code === 'auth/requires-recent-login') {
+        toast.error('Please log out and log back in before changing your password');
+      } else if (error.code === 'auth/weak-password') {
+        toast.error('Password is too weak. Please use a stronger password');
+      } else {
+        toast.error(error.message || 'Failed to set password');
+      }
+    } finally {
+      setSettingPassword(false);
     }
   };
 
@@ -249,6 +330,133 @@ export default function Profile() {
                 />
               ) : (
                 <p className="text-gray-900 text-lg">{user?.bio || 'No bio added yet'}</p>
+              )}
+            </div>
+
+            {/* Password Management Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Password & Security</h3>
+              
+              {/* Sign-in Methods Display */}
+              <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Connected Sign-in Methods:</p>
+                <div className="flex flex-wrap gap-2">
+                  {signInMethods.includes('password') && (
+                    <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-medium flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Email & Password
+                    </span>
+                  )}
+                  {signInMethods.includes('google.com') && (
+                    <span className="px-3 py-1 bg-red-500 text-white rounded-full text-sm font-medium flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Google
+                    </span>
+                  )}
+                  {signInMethods.length === 0 && (
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  )}
+                </div>
+              </div>
+
+              {!showPasswordSection ? (
+                <button
+                  onClick={() => setShowPasswordSection(true)}
+                  className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  {signInMethods.includes('password') ? 'Change Password' : 'Set Password for Email Login'}
+                </button>
+              ) : (
+                <div className="bg-gray-50 p-6 rounded-lg space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-gray-900">
+                      {signInMethods.includes('password') ? 'Change Your Password' : 'Set Password for Email & Password Login'}
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setShowPasswordSection(false);
+                        setPasswordData({ newPassword: '', confirmPassword: '' });
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {!signInMethods.includes('password') && (
+                    <div className="bg-blue-100 border border-blue-200 p-3 rounded-lg mb-4">
+                      <p className="text-sm text-blue-800">
+                        <strong>Note:</strong> You signed up with Google. Setting a password will allow you to login using both Google and email/password methods.
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter new password (min 6 characters)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4">
+                    <button
+                      onClick={() => {
+                        setShowPasswordSection(false);
+                        setPasswordData({ newPassword: '', confirmPassword: '' });
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSetPassword}
+                      disabled={settingPassword}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {settingPassword ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          Setting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {signInMethods.includes('password') ? 'Update Password' : 'Set Password'}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

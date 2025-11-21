@@ -72,24 +72,38 @@ public class UserService {
 
     /**
      * Create a new user with the given signup request and Firebase UID.
+     * Handles multiple auth providers for the same email by updating Firebase UID if needed.
      * @param signupRequest the user signup data
      * @param firebaseUid the Firebase UID
      * @return the created user
      */
     public User createUser(User signupRequest, String firebaseUid) {
-        // Check if user already exists
-        Optional<User> existingUser = userRepository.findByFirebaseUid(firebaseUid);
-        if (existingUser.isPresent()) {
-            log.error("User already exists with Firebase UID: " + firebaseUid);
-            return existingUser.get(); // user already exists, just return
+        // Check if user already exists with this Firebase UID
+        Optional<User> existingUserByUid = userRepository.findByFirebaseUid(firebaseUid);
+        if (existingUserByUid.isPresent()) {
+            log.info("User already exists with Firebase UID: " + firebaseUid);
+            return existingUserByUid.get(); // user already exists, just return
         }
+        
+        // Check if user exists with the same email but different Firebase UID
+        // This happens when user signs up with email/password then tries Google (or vice versa)
+        Optional<User> existingUserByEmail = userRepository.findByEmail(signupRequest.getEmail());
+        if (existingUserByEmail.isPresent()) {
+            User existingUser = existingUserByEmail.get();
+            log.info("User exists with email {} but different Firebase UID. Updating Firebase UID from {} to {}", 
+                     signupRequest.getEmail(), existingUser.getFirebaseUid(), firebaseUid);
+            
+            // Update the Firebase UID to support multiple auth providers
+            existingUser.setFirebaseUid(firebaseUid);
+            return userRepository.save(existingUser);
+        }
+        
         // Create new user
         User user = new User();
         user.setFirebaseUid(firebaseUid);
         user.setUsername(signupRequest.getUsername());
         user.setEmail(signupRequest.getEmail());
         user.setRole(UserRole.STUDENT);
-        user.setEnrolledCourseIds(new ArrayList<>());
         user.setEnrolledCourseIds(new ArrayList<>());
 
         return userRepository.save(user);

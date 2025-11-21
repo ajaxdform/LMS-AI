@@ -137,7 +137,7 @@ export default function ForumList() {
             <button
               onClick={() => navigate("/forum/new")}
               className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg font-bold flex items-center gap-1 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 text-sm">
-            >
+            
               <span className="text-lg">+</span> New Post
             </button>
           </div>
@@ -156,7 +156,7 @@ export default function ForumList() {
               <button
                 type="submit"
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-800 text-white px-4 py-1.5 rounded-md text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-200">
-              >
+              
                 Search
               </button>
             </div>
@@ -182,7 +182,7 @@ export default function ForumList() {
                         ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white font-semibold shadow-lg transform scale-105"
                         : "hover:bg-blue-50 text-gray-700 hover:shadow-md"
                     }`}>
-                  >
+                  
                     <span className="text-sm">{cat.icon}</span>
                     <span className="text-xs">{cat.label}</span>
                   </button>
@@ -196,7 +196,7 @@ export default function ForumList() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full border-2 border-blue-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gradient-to-br from-white to-blue-50 font-medium shadow-md hover:shadow-lg transition-all duration-200">
-              >
+              
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}

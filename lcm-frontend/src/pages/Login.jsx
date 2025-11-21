@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { 
+  signInWithEmailAndPassword, 
+  signInWithPopup, 
+  GoogleAuthProvider,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
+  EmailAuthProvider
+} from "firebase/auth";
 import { auth } from "../firebase";
 import api from "../api/axios";
 
@@ -23,7 +30,27 @@ export default function Login() {
       localStorage.setItem("token", token);
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message || "Failed to login. Please check your credentials.");
+      console.error("Login error:", err);
+      
+      // Handle specific Firebase errors
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        setError("Invalid email or password. Please check your credentials and try again.");
+      } else if (err.code === 'auth/user-not-found') {
+        setError("No account found with this email. Please sign up first.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Too many failed login attempts. Please try again later or reset your password.");
+      } else if (err.code === 'auth/user-disabled') {
+        setError("This account has been disabled. Please contact support.");
+      } else if (err.code === 'auth/invalid-email') {
+        setError("Invalid email address format.");
+      } else {
+        // Check if this might be a Google-only account
+        if (err.message && (err.message.includes('password') || err.code === 'auth/password')) {
+          setError("This account was created with Google sign-in and doesn't have a password set yet. Please either: 1) Use the 'Continue with Google' button below, or 2) Log in with Google, go to your Profile, and set a password.");
+        } else {
+          setError(err.message || "Failed to login. Please check your credentials.");
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -57,7 +84,20 @@ export default function Login() {
       navigate("/dashboard");
     } catch (err) {
       console.error("Google sign-in error:", err);
-      setError(err.message || "Failed to sign in with Google.");
+      
+      // Handle account exists with different credential error
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        const email = err.customData?.email;
+        if (email) {
+          setError(
+            `An account already exists with the email ${email}. Please sign in with your email and password first, then you can link your Google account from your profile settings.`
+          );
+        } else {
+          setError("An account already exists with this email using a different sign-in method. Please use your original sign-in method.");
+        }
+      } else {
+        setError(err.message || "Failed to sign in with Google.");
+      }
     } finally {
       setLoading(false);
     }

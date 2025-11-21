@@ -81,20 +81,44 @@ export default function SignUp() {
       const user = result.user;
       const token = await user.getIdToken();
       
-      // Create user in backend
-      await api.post("/public/signup", {
-        email: user.email,
-        username: user.displayName || user.email.split('@')[0],
-        firebaseUid: user.uid
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      localStorage.setItem("token", token);
-      navigate("/dashboard");
+      // Check if user already exists in backend
+      try {
+        await api.get("/users/current", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        // User exists, just login
+        localStorage.setItem("token", token);
+        navigate("/dashboard");
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // User doesn't exist in backend, create them
+          await api.post("/public/signup", {
+            email: user.email,
+            username: user.displayName || user.email.split('@')[0],
+            firebaseUid: user.uid
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          localStorage.setItem("token", token);
+          navigate("/dashboard");
+        } else {
+          throw err;
+        }
+      }
     } catch (err) {
       console.error("Google sign-up error:", err);
-      if (err.response?.data?.message) {
+      
+      // Handle account exists with different credential error
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        const email = err.customData?.email;
+        if (email) {
+          setError(
+            `An account already exists with the email ${email}. Please sign in with your email and password instead.`
+          );
+        } else {
+          setError("An account already exists with this email using a different sign-in method. Please use your original sign-in method.");
+        }
+      } else if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
         setError(err.message || "Failed to sign up with Google.");

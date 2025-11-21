@@ -148,6 +148,7 @@ export default function ChapterList() {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [loadingTopic, setLoadingTopic] = useState(false);
   const [chapterTopicsMap, setChapterTopicsMap] = useState({}); // Store topics for each chapter
+  const [chapterQuizMap, setChapterQuizMap] = useState({}); // Store quiz for each chapter
 
   useEffect(() => {
     const fetchData = async () => {
@@ -160,7 +161,7 @@ export default function ChapterList() {
         const chaptersResponse = await api.get(`/chapters/${courseId}/chapters`);
         const fetchedChapters = chaptersResponse.data.data || [];
         
-        // Fetch topic counts for all chapters
+        // Fetch topic counts and quizzes for all chapters
         const chaptersWithTopicCount = await Promise.all(
           fetchedChapters.map(async (chapter) => {
             try {
@@ -171,6 +172,21 @@ export default function ChapterList() {
                 ...prev,
                 [chapter.id]: topicsList
               }));
+
+              // Fetch quiz for this chapter
+              try {
+                const quizResponse = await api.get(`/quizzes/chapterId/${chapter.id}`);
+                const quizData = quizResponse.data.data;
+                if (quizData) {
+                  setChapterQuizMap(prev => ({
+                    ...prev,
+                    [chapter.id]: quizData // Store the quiz
+                  }));
+                }
+              } catch (quizErr) {
+                console.log(`No quiz found for chapter ${chapter.id}`);
+              }
+
               return {
                 ...chapter,
                 topicsCount: topicsList.length
@@ -625,6 +641,42 @@ export default function ChapterList() {
                             </svg>
                           </button>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Chapter Quiz Section */}
+                  {chapterQuizMap[selectedChapter.id] && (
+                    <div className="mt-8 pt-8 border-t border-gray-200">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4">Chapter Quiz</h3>
+                      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-lg border-2 border-purple-200">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="text-lg font-bold text-gray-900 mb-2">
+                              {chapterQuizMap[selectedChapter.id].title}
+                            </h4>
+                            <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                              <span className="flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                {chapterQuizMap[selectedChapter.id].question?.length || 0} Questions
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Test your knowledge of this chapter by taking the quiz. Good luck!
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => navigate(`/chapters/${selectedChapter.id}/quiz`)}
+                            className="ml-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            Take Quiz
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

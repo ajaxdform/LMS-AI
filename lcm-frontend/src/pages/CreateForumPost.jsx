@@ -150,7 +150,7 @@ export default function CreateForumPost() {
                         ? "border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-700 font-bold shadow-xl scale-105"
                         : "border-blue-200 hover:border-blue-400 bg-white"
                     }`}>
-                  >
+                  
                     <div className="text-2xl mb-1">{cat.icon}</div>
                     <div className="text-[10px] font-semibold">{cat.label}</div>
                   </button>
@@ -240,7 +240,7 @@ export default function CreateForumPost() {
                     <div
                       key={index}
                       className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 shadow-sm">
-                    >
+                    
                       <div className="flex items-center gap-2 flex-1">
                         <span className="text-xl">
                           {file.type.startsWith('image/') ? '🖼️' : 

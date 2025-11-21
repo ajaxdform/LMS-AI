@@ -649,36 +649,98 @@ export default function AdminQuizzes() {
       ) : (
         <div className="space-y-4">
           {questions.map((question, index) => (
-            <div key={question.id} className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+            <div key={question.id || index} className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
                       Question {index + 1}
                     </span>
+                    <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                      {question.type || 'SINGLE_CHOICE'}
+                    </span>
+                    <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                      {question.points || 1} {question.points === 1 ? 'point' : 'points'}
+                    </span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">{question.question}</h3>
                   
-                  <div className="space-y-2 mb-3">
-                    {question.options.map((option, optIndex) => (
-                      <div 
-                        key={optIndex} 
-                        className={`flex items-center gap-2 p-2 rounded ${
-                          optIndex === question.correctOptionIndex 
-                            ? 'bg-green-50 border border-green-300' 
-                            : 'bg-gray-50'
-                        }`}
-                      >
-                        <span className="font-medium text-sm text-gray-600 w-6">
-                          {String.fromCharCode(65 + optIndex)}.
-                        </span>
-                        <span className="text-sm text-gray-700">{option}</span>
-                        {optIndex === question.correctOptionIndex && (
+                  {/* Render based on question type */}
+                  {(question.type === 'SINGLE_CHOICE' || question.type === 'MULTIPLE_CHOICE') && question.options && (
+                    <div className="space-y-2 mb-3">
+                      {question.options.map((option, optIndex) => (
+                        <div 
+                          key={optIndex} 
+                          className={`flex items-center gap-2 p-2 rounded ${
+                            question.type === 'SINGLE_CHOICE' && optIndex === question.correctOptionIndex
+                              ? 'bg-green-50 border border-green-300'
+                              : question.type === 'MULTIPLE_CHOICE' && question.correctOptionIndices?.includes(optIndex)
+                              ? 'bg-green-50 border border-green-300'
+                              : 'bg-gray-50'
+                          }`}
+                        >
+                          <span className="font-medium text-sm text-gray-600 w-6">
+                            {String.fromCharCode(65 + optIndex)}.
+                          </span>
+                          <span className="text-sm text-gray-700">{option}</span>
+                          {question.type === 'SINGLE_CHOICE' && optIndex === question.correctOptionIndex && (
+                            <span className="ml-auto text-xs font-semibold text-green-700">✓ Correct</span>
+                          )}
+                          {question.type === 'MULTIPLE_CHOICE' && question.correctOptionIndices?.includes(optIndex) && (
+                            <span className="ml-auto text-xs font-semibold text-green-700">✓ Correct</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {question.type === 'TRUE_FALSE' && (
+                    <div className="space-y-2 mb-3">
+                      <div className={`flex items-center gap-2 p-2 rounded ${
+                        question.correctAnswer === true ? 'bg-green-50 border border-green-300' : 'bg-gray-50'
+                      }`}>
+                        <span className="font-medium text-sm text-gray-600">True</span>
+                        {question.correctAnswer === true && (
                           <span className="ml-auto text-xs font-semibold text-green-700">✓ Correct</span>
                         )}
                       </div>
-                    ))}
-                  </div>
+                      <div className={`flex items-center gap-2 p-2 rounded ${
+                        question.correctAnswer === false ? 'bg-green-50 border border-green-300' : 'bg-gray-50'
+                      }`}>
+                        <span className="font-medium text-sm text-gray-600">False</span>
+                        {question.correctAnswer === false && (
+                          <span className="ml-auto text-xs font-semibold text-green-700">✓ Correct</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {question.type === 'CODE_EVALUATION' && (
+                    <div className="space-y-2 mb-3">
+                      <div className="bg-gray-50 p-3 rounded">
+                        <p className="text-xs text-gray-600 mb-1">Language: <span className="font-semibold">{question.programmingLanguage}</span></p>
+                        {question.sampleCode && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-600 mb-1">Sample Code:</p>
+                            <pre className="bg-gray-900 text-gray-100 p-2 rounded text-xs overflow-x-auto">{question.sampleCode}</pre>
+                          </div>
+                        )}
+                        {question.expectedOutput && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-600 mb-1">Expected Output:</p>
+                            <pre className="bg-gray-900 text-gray-100 p-2 rounded text-xs">{question.expectedOutput}</pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {question.explanation && (
+                    <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                      <p className="text-xs font-semibold text-blue-800 mb-1">Explanation:</p>
+                      <p className="text-sm text-blue-900">{question.explanation}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2 ml-4">
                   <button
